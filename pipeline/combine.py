@@ -8,13 +8,29 @@ without re-invoking Gemma.
 
 Usage: python pipeline/combine.py
 """
-import json, os, sys, base64, webbrowser
+import json, os, sys, base64, re, webbrowser
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# product is Chinese-first: map Japanese (and a few English) room names to Chinese
+ROOM_ZH = {
+    "居間": "客厅", "リビング": "客厅", "寝室": "卧室", "洋室": "卧室", "和室": "和室",
+    "台所": "厨房", "キッチン": "厨房", "ダイニング": "餐厅", "DK": "DK", "LDK": "LDK",
+    "玄関": "玄关", "ホール": "门厅", "廊下": "走廊", "階段": "楼梯",
+    "浴室": "浴室", "洗面": "盥洗", "脱衣": "更衣室", "トイレ": "卫生间", "便所": "卫生间",
+    "収納": "储物", "物入": "储物", "押入": "壁橱", "納戸": "储物", "クローゼット": "壁橱",
+    "子供室": "儿童房", "子供部屋": "儿童房", "書斎": "书房", "ポーチ": "门廊",
+    "バルコニー": "阳台", "ユーティリティ": "家政间",
+}
+def _zh_name(n):
+    b = re.sub(r"[（(].*$", "", re.sub(r"[\s\d]", "", str(n))).strip()   # "居間 (LDK)" -> "居間"
+    return ROOM_ZH.get(b, n)
 
 def render(data, img_path=None, out_html=None, open_browser=True):
     """data = {dims, walls, rooms, lenses}. img_path = source floor plan to embed
     as the panel thumbnail (falls back to data['img']). Returns the written path."""
+    for r in data.get("rooms", []):                  # Chinese-first room labels
+        r["name"] = _zh_name(r.get("name", ""))
     web = os.path.join(HERE, "web")
     tpl = open(os.path.join(web, "combined.template.html")).read()
     keep = {k: data[k] for k in ("dims", "walls", "rooms", "lenses", "geom") if k in data}

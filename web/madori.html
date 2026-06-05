@@ -76,13 +76,13 @@
   .lens .lab{margin-bottom:6px;}
   .lens p{line-height:1.78;color:#38302a;}
   /* precision-honesty disclaimer */
-  .disclaimer{position:fixed;top:60px;left:28px;z-index:10;font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;line-height:1.55;color:#9a7a4a;background:rgba(255,248,238,.74);border:1px solid rgba(180,140,70,.26);border-radius:6px;padding:4px 10px;max-width:312px;pointer-events:none;}
+  .disclaimer{position:fixed;top:80px;left:28px;z-index:10;font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;line-height:1.55;color:#9a7a4a;background:rgba(255,248,238,.74);border:1px solid rgba(180,140,70,.26);border-radius:6px;padding:4px 10px;max-width:312px;pointer-events:none;}
   .disclaimer b{color:#7a5a24;}
   /* mobile: panel becomes a bottom sheet, 3D stays visible on top */
   @media(max-width:820px){
     .title{background:rgba(239,233,223,.72);padding:5px 9px;border-radius:7px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
     .title h1{font-size:15px;} .title .sub{font-size:9px;}
-    .disclaimer{top:58px;font-size:8.5px;max-width:64vw;}
+    .disclaimer{top:70px;font-size:8.5px;max-width:64vw;}
     .read{top:auto;bottom:0;left:0;width:100%;height:46%;border-left:none;border-top:1px solid var(--hair);box-shadow:0 -10px 28px rgba(60,52,40,.12);}
     .read .scroll{padding:14px 18px 86px;}
     .modebar{bottom:auto;top:calc(54% - 48px);}
@@ -131,7 +131,7 @@
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const M = {"dims": [12.5, 7.3], "walls": [[0, 0, 12.5, 0], [12.5, 0, 12.5, 7.3], [12.5, 7.3, 0, 7.3], [0, 7.3, 0, 0], [0.0, 3.5, 0.0, 0.0], [5.0, 7.3, 0.0, 7.3], [0.0, 7.3, 0.0, 3.5], [5.5, 5.0, 8.5, 5.0], [8.5, 5.0, 8.5, 7.3], [8.5, 7.3, 5.5, 7.3], [5.5, 7.3, 5.5, 5.0], [5.0, 3.5, 6.0, 3.5], [6.0, 3.5, 6.0, 5.5], [6.0, 5.5, 5.0, 5.5], [5.0, 5.5, 5.0, 3.5], [9.0, 0.0, 11.0, 0.0], [11.0, 0.0, 11.0, 2.0], [11.0, 2.0, 9.0, 2.0], [9.0, 2.0, 9.0, 0.0], [8.0, 0.0, 9.0, 0.0], [9.0, 0.0, 9.0, 1.5], [9.0, 1.5, 8.0, 1.5], [8.0, 1.5, 8.0, 0.0]], "rooms": [{"name": "DK", "rect": [0.0, 0.0, 5.0, 3.5], "win": ["up", "left", "right"]}, {"name": "居間", "rect": [0.0, 3.5, 5.0, 3.8], "win": ["left", "down"]}, {"name": "和室", "rect": [5.5, 5.0, 3.0, 2.3], "win": ["up", "right"]}, {"name": "玄関", "rect": [5.0, 3.5, 1.0, 2.0], "win": []}, {"name": "浴室", "rect": [9.0, 0.0, 2.0, 2.0], "win": ["up", "right"]}, {"name": "トイレ", "rect": [8.0, 0.0, 1.0, 1.5], "win": ["up", "right"]}], "lenses": {"动线": {"title": "动线流畅，空间连接合理。从底部玄关进入后，可直接", "body": "动线流畅，空间连接合理。从底部玄关进入后，可直接到达客厅和餐厅区域，活动空间衔接自然。前往上层房间的动线清晰，主要通过楼梯引导。"}, "采光": {"title": "户型采光初步分析，需明确建筑朝向才能准确判断。目", "body": "户型采光初步分析，需明确建筑朝向才能准确判断。目前图中所有房间的窗户位置和大小无法确定最佳采光效果。请提供建筑的朝向信息以便进一步评估。"}, "无障碍": {"title": "家庭生活空间布局初步分析", "body": "从平面图来看，整体动线相对清晰，但关于无障碍细节（如门宽、坡道或卫生间内部的实际尺寸）无法判断是否对老人或轮椅友好。图中没有明确标出任何无障碍设施的细节信息。"}, "走读": {"title": "家里的动线和空间布局介绍", "body": "您从底部进入的玄关，首先会看到一个宽敞的客厅区域，左侧是DK（可能是储藏室或厨房），前方的走廊通向主要的活动空间。右侧则分布着洗手间、卫生间等配套设施，整体感觉是一个功能分区比较清晰的家。"}, "批评": {"title": "户型布局合理，动静分区明确。优点是DK和居間区域", "body": "户型布局合理，动静分区明确。优点是DK和居間区域面积足够大，保证了生活空间的舒适度；缺点是上层浴室和トイレ的相邻性过高，可能造成私密性冲突。建议在二楼增加一个小隔断或储物柜，将卫生间区域进行适当分隔。"}}, "geom": {"coverage": 0.61, "level": "high", "calibrated": null}};
+const M = {"dims": [12.5, 7.3], "walls": [[0, 0, 12.5, 0], [12.5, 0, 12.5, 7.3], [12.5, 7.3, 0, 7.3], [0, 7.3, 0, 0], [0.0, 3.5, 0.0, 0.0], [5.0, 7.3, 0.0, 7.3], [0.0, 7.3, 0.0, 3.5], [5.5, 5.0, 8.5, 5.0], [8.5, 5.0, 8.5, 7.3], [8.5, 7.3, 5.5, 7.3], [5.5, 7.3, 5.5, 5.0], [5.0, 3.5, 6.0, 3.5], [6.0, 3.5, 6.0, 5.5], [6.0, 5.5, 5.0, 5.5], [5.0, 5.5, 5.0, 3.5], [9.0, 0.0, 11.0, 0.0], [11.0, 0.0, 11.0, 2.0], [11.0, 2.0, 9.0, 2.0], [9.0, 2.0, 9.0, 0.0], [8.0, 0.0, 9.0, 0.0], [9.0, 0.0, 9.0, 1.5], [9.0, 1.5, 8.0, 1.5], [8.0, 1.5, 8.0, 0.0]], "rooms": [{"name": "DK", "rect": [0.0, 0.0, 5.0, 3.5], "win": ["up", "left", "right"]}, {"name": "客厅", "rect": [0.0, 3.5, 5.0, 3.8], "win": ["left", "down"]}, {"name": "和室", "rect": [5.5, 5.0, 3.0, 2.3], "win": ["up", "right"]}, {"name": "玄关", "rect": [5.0, 3.5, 1.0, 2.0], "win": []}, {"name": "浴室", "rect": [9.0, 0.0, 2.0, 2.0], "win": ["up", "right"]}, {"name": "卫生间", "rect": [8.0, 0.0, 1.0, 1.5], "win": ["up", "right"]}], "lenses": {"动线": {"title": "动线流畅，空间连接合理。从底部玄关进入后，可直接", "body": "动线流畅，空间连接合理。从底部玄关进入后，可直接到达客厅和餐厅区域，活动空间衔接自然。前往上层房间的动线清晰，主要通过楼梯引导。"}, "采光": {"title": "户型采光初步分析，需明确建筑朝向才能准确判断。目", "body": "户型采光初步分析，需明确建筑朝向才能准确判断。目前图中所有房间的窗户位置和大小无法确定最佳采光效果。请提供建筑的朝向信息以便进一步评估。"}, "无障碍": {"title": "家庭生活空间布局初步分析", "body": "从平面图来看，整体动线相对清晰，但关于无障碍细节（如门宽、坡道或卫生间内部的实际尺寸）无法判断是否对老人或轮椅友好。图中没有明确标出任何无障碍设施的细节信息。"}, "走读": {"title": "家里的动线和空间布局介绍", "body": "您从底部进入的玄关，首先会看到一个宽敞的客厅区域，左侧是DK（可能是储藏室或厨房），前方的走廊通向主要的活动空间。右侧则分布着洗手间、卫生间等配套设施，整体感觉是一个功能分区比较清晰的家。"}, "批评": {"title": "户型布局合理，动静分区明确。优点是DK和居間区域", "body": "户型布局合理，动静分区明确。优点是DK和居間区域面积足够大，保证了生活空间的舒适度；缺点是上层浴室和トイレ的相邻性过高，可能造成私密性冲突。建议在二楼增加一个小隔断或储物柜，将卫生间区域进行适当分隔。"}}, "geom": {"coverage": 0.61, "level": "high", "calibrated": null}};
 const LC={"动线":"#b34a26","采光":"#a8842f","无障碍":"#3a6b6e","走读":"#7a5a8a","批评":"#6f7d4a"};
 const EN={"动线":"circulation","采光":"daylight","无障碍":"accessibility","走读":"walkthrough","批评":"critique"};
 
@@ -223,9 +223,14 @@ function refreshStruct(dispW,dispH,calTxt){const cal=calTxt?` · <b style="color
   document.getElementById('struct').innerHTML=`结构 · <b>${dispW.toFixed(1)}×${dispH.toFixed(1)}m</b> · ${roomList}${cal}`;}
 refreshStruct(baseW,baseH,null);
 (function(){const ai=document.getElementById('areaIn'),cs=document.getElementById('calibState');if(!ai)return;
+  const totA=D.rooms.reduce((s,r)=>s+(Array.isArray(r.rect)?Math.max(0,+r.rect[2])*Math.max(0,+r.rect[3]):0),0)||1;
+  function chipAreas(area){const box=document.getElementById('chips');if(!box)return;       // distribute total area by room footprint share
+    [...box.children].forEach(c=>{const r=D.rooms.find(x=>x.name===c.dataset.name);
+      if(area&&r&&Array.isArray(r.rect)){const m2=Math.max(0,+r.rect[2])*Math.max(0,+r.rect[3])/totA*area;
+        c.textContent=`${c.dataset.name} ~${m2.toFixed(1)}㎡`;}else c.textContent=c.dataset.name;});}
   ai.addEventListener('input',()=>{const a=parseFloat(ai.value);
-    if(!a||a<=0){refreshStruct(baseW,baseH,null);cs.textContent='';return;}
-    const s=Math.sqrt(a/(baseW*baseH));refreshStruct(baseW*s,baseH*s,`已按面积 ${a}㎡ 标定`);cs.textContent='✓';cs.style.color='#3a6b6e';});})();
+    if(!a||a<=0){refreshStruct(baseW,baseH,null);cs.textContent='';chipAreas(0);return;}
+    const s=Math.sqrt(a/(baseW*baseH));refreshStruct(baseW*s,baseH*s,`已按面积 ${a}㎡ · 每间为估算`);cs.textContent='✓';cs.style.color='#3a6b6e';chipAreas(a);});})();
 const chips=document.getElementById('chips');
 D.rooms.forEach(r=>{const el=document.createElement('span');el.className='chip';el.textContent=r.name;el.dataset.name=r.name;
   if(!lowConf){el.onmouseenter=()=>setHover(r.name);el.onmouseleave=()=>setHover(null);
