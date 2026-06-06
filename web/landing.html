@@ -115,8 +115,8 @@ section{padding:80px 0;border-top:1px solid var(--line);}
 footer{border-top:1px solid var(--line);padding:30px 0;font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--faint);}
 footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 @media(max-width:820px){
-  /* CJK 防词组断裂：只在标点/空格处断行，多字术语不被拆 */
-  body{word-break:keep-all;overflow-wrap:break-word;line-break:strict;}
+  /* CJK 换行：短词组优先整体（keep-all），过长无标点串才兜底断字（anywhere 才影响 min-content，防溢出） */
+  body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict;}
   .wrap{padding-left:24px;padding-right:24px;}
   /* 字号阶梯压缩 + 标题行高放松 */
   .hero{padding:46px 0 22px;}
