@@ -121,8 +121,11 @@ footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   /* 字号阶梯压缩 + 标题行高放松 */
   .hero{padding:46px 0 22px;}
   .hero h1{font-size:34px;line-height:1.22;}
-  .hero .sub{align-items:flex-start;margin-top:28px;gap:22px;}
+  .hero .sub{flex-direction:column;align-items:stretch;margin-top:28px;gap:24px;}
   .hero .sub p{font-size:16px;line-height:1.8;max-width:none;}
+  /* CTA：移动端按钮全宽，触控友好 + 对齐整齐 */
+  .hero .cta{flex-direction:column;}
+  .cta .btn{width:100%;text-align:center;}
   .exhibit{margin-top:30px;}
   section{padding:52px 0;}
   .shead{margin-bottom:8px;gap:12px;}
@@ -141,6 +144,10 @@ footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   .arrow{transform:rotate(90deg);padding:6px 0;}
   .foot{padding:64px 0;}
   .foot h2{font-size:30px;line-height:1.38;}
+  /* foot 三按钮：主全宽 + 两次并排（1+2），主次分明不错位 */
+  .foot .cta{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .foot .cta .btn{padding-left:12px;padding-right:12px;}
+  .foot .cta .btn-1{grid-column:1 / -1;}
   footer .in{flex-direction:column;gap:7px;}
   footer span{overflow-wrap:normal;}            /* 覆盖移动端 anywhere：英文只在空格断，配 &nbsp; 不留孤字 */
   .exhibit .mlabel{left:12px;bottom:12px;padding:6px 10px;}
