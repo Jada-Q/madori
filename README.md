@@ -1,6 +1,27 @@
 # 户型解读 · Madori — AI 读懂任何户型图
 
-> 把一张冷冰冰的户型图，变成一位建筑师坐在你身边、用大白话给你讲这个家——全程本地运行，私密、免费。
+> 普通人看户型图，只看得懂「几室几厅」。图上写着什么、缺了什么、哪里有坑——看不出来。
+> **Madori 把建筑师的「读图能力」，降维成普通人一眼就能看到的画面。**
+
+![Gemma 4](https://img.shields.io/badge/Gemma_4-多模态视觉-b34a26) ![赛道 B](https://img.shields.io/badge/GDG_Hackathon-赛道_B_·_Multimodal-c77d4a) ![双轨引擎](https://img.shields.io/badge/引擎-本地隐私_+_云端精度-3a6b6e) ![Three.js](https://img.shields.io/badge/3D-Three.js_白模-6b655c)
+
+![Madori · 户型解读四视图](web/assets/hero-read.png)
+
+> 一张户型图 → 生成可旋转的 3D 白模 + 切一下视图，专业分析直接画在图上。
+
+**切一个视图，建筑师的一种眼睛就交给你：**
+
+| 📖 解读 | ☀ 采光 | 🚶 动线 | ♿ 无障碍 |
+|---|---|---|---|
+| 房间识别 + 五位专家镜头（动线/采光/无障碍/走读/批评），点房间实时联动 | 选北朝向，**确定性算出**每间采光等级——算出来的事实，不瞎猜 | 从玄关出发的路径 + 到达顺序，一眼看清进门怎么走 | 标出对老人/轮椅的关注点：湿区、高差、过窄通行 |
+
+<p>
+<img src="web/assets/hero-day.png" width="32%" /> <img src="web/assets/hero-circ.png" width="32%" /> <img src="web/assets/hero-a11y.png" width="32%" />
+</p>
+
+**两套引擎，一个产品** — 本地 `gemma4:e4b`（隐私 · 免费 · 离线）⟷ 云端 `gemma-4-31b`（更大 · 抽取更全）。同一套 Gemma 4 编排，按场景选隐私或精度。几何由代码按抽取结构锁定校验（理解归 LLM，计算归代码），不靠模型臆测尺寸。
+
+🎬 **[Demo 视频](web/demo/madori-demo.mp4)** &nbsp;·&nbsp; 🖥 **[在线试用白模](web/madori.html)** &nbsp;·&nbsp; 📄 **[技术报告](TECHNICAL_REPORT.md)**
 
 ---
 
@@ -19,7 +40,12 @@
 
 除了文字解读，Madori 还会把这张**平面图**生成一个白色的 **3D「study model（白模 / massing）」**，让你拖一个滑块在「**平面 ⟷ 立体**」之间切换，**亲眼看到**这个家的体量和层次——而不是只能对着一张平面图想象。
 
-**全程本地运行**（Ollama + Gemma 4 `gemma4:e4b`），不上传任何云端，你的家不会离开你的电脑。
+**两种运行模式，你来选**：
+
+- **本地隐私版**（默认）：Ollama + `gemma4:e4b`，全程本机，不上传任何云端，你的家不会离开你的电脑。
+- **云端精度版**：调用 `gemma-4-31b`（仍是 Gemma 4，只是更大），房间抽取更全、命名更稳。几何由代码按抽取结构锁定校验，不靠模型臆测尺寸——需要更准布局时用。
+
+两个模式共用同一套 `extract → lock → multi-lens` 编排（见下文）。**隐私优先用本地，精度优先用云端**——这正是边缘小模型与云端大模型分工的现实写照。
 
 ---
 
@@ -68,7 +94,7 @@ ollama pull gemma4:e4b
 
 ```bash
 # 传入一张 户型图（PNG / JPG / PDF 单页）
-python pipeline/plan_read.py samples/floorplan.png
+python3 pipeline/plan_read.py samples/floorplan.png
 ```
 
 脚本会：
@@ -82,11 +108,20 @@ python pipeline/plan_read.py samples/floorplan.png
 
 ```bash
 # 用任意静态服务器起 web/ 目录
-python -m http.server 8000 --directory web
+python3 -m http.server 8000 --directory web
 # 浏览器访问 http://localhost:8000
 ```
 
 拖动 **平面 ⟷ 立体** 滑块，平面图会立起来变成白色体块模型，房间会标上从图纸里读出的名字。
+
+**（可选）云端精度模式** — 要更全的房间抽取 + 更准布局时，用云端大 Gemma 4（几何仍由代码锁定校验）：
+
+```bash
+echo "GOOGLE_AI_KEY=你的key" > .env.local                                      # Google AI Studio key（gitignored，不进库）
+python3 pipeline/plan_read.py samples/madorizu_1f.png                            # 本地 e4b：拿五镜头文字解读
+MADORI_MODEL=gemma-4-31b-it python3 pipeline/madori3.py samples/madorizu_1f.png  # 云端 31b：抽精确几何
+python3 pipeline/precise_to_reading.py                                          # 合并 → 精度版 web/madori.html
+```
 
 ---
 
@@ -128,19 +163,19 @@ python -m http.server 8000 --directory web
 
 ```bash
 # 1) 定位：从照片 EXIF GPS 取坐标（截图无 GPS 时手填）
-python pipeline/locate.py photo.jpg              # 或 --lat 35.6638 --lng 139.5872
+python3 pipeline/locate.py photo.jpg              # 或 --lat 35.6638 --lng 139.5872
 
 # 2) 自动选 mesh：坐标 → 日本标准网格码（确定性，JIS X 0410）→ 取 PLATEAU CityGML
-python pipeline/geo.py --lat 35.6638 --lng 139.5872
+python3 pipeline/geo.py --lat 35.6638 --lng 139.5872
 
 # 3) 真实白模：CityGML 的 footprint + 高度挤出（全本地，断网可渲，无 key 无云）
-python pipeline/plateau_parse.py <那块.gml>      # 生成并打开 web/plateau_view.html
+python3 pipeline/plateau_parse.py <那块.gml>      # 生成并打开 web/plateau_view.html
 
 # 4) 真实采光：有坐标 = 有朝向 → 确定性算（不靠猜）
-python pipeline/real_read.py <那块.gml>          # 立面朝向分布 / 西晒 / 太阳高度角
+python3 pipeline/real_read.py <那块.gml>          # 立面朝向分布 / 西晒 / 太阳高度角
 
 # 5) Gemma 定性解读真实建筑照片（体量 / 材质 / 文脉 / 批评，可叠加真实采光）
-python pipeline/building_read.py photo.jpg --lat 35.6638 --lng 139.5872
+python3 pipeline/building_read.py photo.jpg --lat 35.6638 --lng 139.5872
 ```
 
 **腿 B 顺带解决腿 A 的硬伤**：户型图没标朝向 → 采光只能说「未知」；接入真实坐标 → **采光变成可算的事实**（这是质变）。

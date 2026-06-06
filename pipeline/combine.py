@@ -33,7 +33,7 @@ def render(data, img_path=None, out_html=None, open_browser=True):
         r["name"] = _zh_name(r.get("name", ""))
     web = os.path.join(HERE, "web")
     tpl = open(os.path.join(web, "combined.template.html")).read()
-    keep = {k: data[k] for k in ("dims", "walls", "rooms", "lenses", "geom") if k in data}
+    keep = {k: data[k] for k in ("dims", "walls", "rooms", "lenses", "geom", "openings", "balcony") if k in data}
     p = img_path or data.get("img")
     b64 = base64.b64encode(open(p, "rb").read()).decode() if (p and os.path.exists(p)) else ""
     html = (tpl.replace("__DATA_JSON__", json.dumps(keep, ensure_ascii=False))

@@ -107,12 +107,35 @@ def clean_names(rooms):
         out.append(r)
     return out
 
+def _balanced(raw, key):
+    """Extract the {...} object beginning at the LAST occurrence of `key`, by brace-counting.
+    Reasoning models (gemma-4-31b) emit long prose then a final {"rooms":...}; the greedy {.*}
+    regex gets fooled by stray {} in the prose (e.g. 'empty frame `{}`'), so target the real one."""
+    i = raw.rfind(key)
+    if i < 0: return None
+    depth = 0
+    for j in range(i, len(raw)):
+        if raw[j] == '{': depth += 1
+        elif raw[j] == '}':
+            depth -= 1
+            if depth == 0:
+                try: return json.loads(raw[i:j+1])
+                except Exception: return None
+    return None
+
 def grab_json(raw):
     m = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw)
-    s = m.group(1) if m else ((re.search(r"\{[\s\S]*\}", raw) or [None])[0] if re.search(r"\{[\s\S]*\}", raw) else None)
-    if not s: return None
-    try: return json.loads(s)
-    except Exception: return None
+    if m:
+        try: return json.loads(m.group(1))
+        except Exception: pass
+    for key in ('{"rooms"', '{"bounds"', '{"walls"', '{"openings"'):   # real objects, skip stray {} in reasoning prose
+        obj = _balanced(raw, key)
+        if obj: return obj
+    mm = re.search(r"\{[\s\S]*\}", raw)                                  # last-resort greedy
+    if mm:
+        try: return json.loads(mm.group(0))
+        except Exception: return None
+    return None
 
 # ---------------- Stage 1: outline + outer walls ----------------
 S1_SYS = """你是日本住宅平面图(間取り)判读专家。3阶段流程第1阶段，只负责【外框 + 4面外墙】。
@@ -166,7 +189,7 @@ def score_rooms(rooms, W, D):
     """higher = cleaner layout. e4b polygon quality varies run-to-run; this lets us
     sample N times and keep the best. Penalizes overlap, a dominant oversized room,
     bad coverage, and odd room counts."""
-    if len(rooms) < 4: return -1e9
+    if len(rooms) < 2: return -1e9
     A = max(W*D, 1)
     areas = [poly_area(r["polygon"]) for r in rooms]
     total = sum(areas) or 1
@@ -177,7 +200,7 @@ def score_rooms(rooms, W, D):
     s -= abs(cover - 1.0) * 2.0        # rooms should ~fill bounds
     s -= (ov / A) * 3.0                # overlap is the worst symptom
     s -= max(0, dom - 0.4) * 4.0       # one giant room (e.g. 巨大洗面) = bad read
-    s += 1.0 if 6 <= n <= 16 else -0.3 * abs(n - 11)
+    s += 1.0 if 2 <= n <= 16 else -0.3 * abs(n - 11)
     s += (len(set(r.get("name", "") for r in rooms)) / max(n, 1)) * 2.0   # reward distinct names (kill 'Polygon'×N)
     return s
 
@@ -238,10 +261,10 @@ for att in range(_NS):                                # sample N, keep best
     open('/tmp/s2raw.txt', 'w').write(raw2)            # debug dump for regex tuning
     d2 = grab_json(raw2) or {}
     rms = [r for r in d2.get("rooms", []) if isinstance(r.get("polygon"), list) and len(r["polygon"]) >= 3]
-    if len(rms) < 4:                                   # JSON failed → try extracting from reasoning text
+    if len(rms) < 2:                                   # JSON failed → try extracting from reasoning text (≥2 supports simple apartments)
         rms = parse_reasoning_rooms(raw2)
-        if len(rms) >= 4: print(f"    sample {att+1}: JSON 失败，从 reasoning 提取到 {len(rms)} rooms")
-    if len(rms) < 4:
+        if len(rms) >= 2: print(f"    sample {att+1}: JSON 失败，从 reasoning 提取到 {len(rms)} rooms")
+    if len(rms) < 2:
         print(f"    sample {att+1}: {len(rms)} rooms (skip) · len={len(raw2)}"); continue
     rw, rd = recenter(rms)                            # bounds from the rooms' own bbox
     snap_round(rms, grid=max(rw, rd) / 36)

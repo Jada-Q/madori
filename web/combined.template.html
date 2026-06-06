@@ -140,7 +140,7 @@ function norm(b){b=b||{};let W=9,H=7;if(Array.isArray(b.dims)&&b.dims.length>=2)
   let walls=Array.isArray(b.walls)?b.walls.filter(w=>Array.isArray(w)&&w.length>=4):[];
   if(!walls.length)walls=[[0,0,W,0],[W,0,W,H],[W,H,0,H],[0,H,0,0]];
   let rooms=Array.isArray(b.rooms)?b.rooms.filter(r=>r&&Array.isArray(r.rect)&&r.rect.length>=4):[];
-  return {dims:[W,H],walls,rooms,lenses:b.lenses||{},geom:b.geom||{level:'high',coverage:1}};}
+  return {dims:[W,H],walls,rooms,lenses:b.lenses||{},geom:b.geom||{level:'high',coverage:1},openings:Array.isArray(b.openings)?b.openings:[],balcony:(b.balcony&&isFinite(b.balcony.w))?b.balcony:null};}
 const D=norm(M),[W,H]=D.dims;
 const lowConf = D.geom && D.geom.level==='low';   // messy/unreliable parse → degrade massing
 
@@ -187,33 +187,48 @@ const building=new THREE.Group();scene.add(building);
 const slab=new THREE.Mesh(new THREE.BoxGeometry(spanX,SLAB_T,spanZ),slabMat);slab.position.set(cx,SLAB_T/2,cz);slab.castShadow=true;slab.receiveShadow=true;building.add(slab);
 // low confidence → draw only the outer frame (interior walls aren't trustworthy)
 const RW = lowConf ? [[0,0,W,0],[W,0,W,H],[W,H,0,H],[0,H,0,0]] : D.walls;
-RW.forEach(([x1,z1,x2,z2])=>{const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<1e-4)return;const geo=new THREE.BoxGeometry(len+WALL_T,WALL_H,WALL_T);const wm=new THREE.Mesh(geo,wallMat);wm.position.set((x1+x2)/2,SLAB_T+WALL_H/2,(z1+z2)/2);wm.rotation.y=-Math.atan2(dz,dx);wm.castShadow=true;wm.receiveShadow=true;building.add(wm);
-  const we=new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeMat);we.position.copy(wm.position);we.rotation.copy(wm.rotation);building.add(we);});
+const OPENINGS = lowConf ? [] : (D.openings||[]);
+// an opening's center sits ON a wall when its perpendicular distance is tiny + it's within the span
+function holesOn(x1,z1,x2,z2){const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<1e-4)return[];const ux=dx/len,uz=dz/len,out=[];
+  OPENINGS.forEach(o=>{const ox=o.x-x1,oz=o.z-z1,t=ox*ux+oz*uz,perp=Math.abs(ox*uz-oz*ux);if(perp<0.35&&t>0.05&&t<len-0.05)out.push({t,w:o.w||0.9,type:o.type});});
+  return out.sort((a,b)=>a.t-b.t);}
+// render a wall as solid segments that go AROUND each opening: window = sill below + lintel above + glass in the gap; door = lintel only (open to the floor)
+function buildWall(x1,z1,x2,z2){const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<1e-4)return;const ux=dx/len,uz=dz/len,rot=-Math.atan2(dz,dx);const holes=holesOn(x1,z1,x2,z2);const SILL=WALL_H*0.34,HEAD=WALL_H*0.74;
+  const piece=(midT,L,h,y,mat,edge)=>{if(L<0.01)return;const mx=x1+ux*midT,mz=z1+uz*midT;const geo=new THREE.BoxGeometry(L,h,WALL_T);const m=new THREE.Mesh(geo,mat);m.position.set(mx,y,mz);m.rotation.y=rot;m.castShadow=true;m.receiveShadow=true;building.add(m);if(edge){const ed=new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeMat);ed.position.copy(m.position);ed.rotation.copy(m.rotation);building.add(ed);}};
+  const wallSeg=(a,b)=>{let s=a,e=b;if(a<=0.001)s-=WALL_T/2;if(b>=len-0.001)e+=WALL_T/2;piece((s+e)/2,e-s,WALL_H,SLAB_T+WALL_H/2,wallMat,true);};   // full-height, corner-extended at wall ends
+  let cur=0;holes.forEach(h=>{const s=Math.max(0,h.t-h.w/2),e=Math.min(len,h.t+h.w/2);if(s>cur+0.01)wallSeg(cur,s);const mt=(s+e)/2,hw=e-s;
+    if(h.type==='window'){piece(mt,hw,SILL,SLAB_T+SILL/2,wallMat,true);piece(mt,hw,WALL_H-HEAD,SLAB_T+HEAD+(WALL_H-HEAD)/2,wallMat,true);piece(mt,hw*0.96,HEAD-SILL,SLAB_T+SILL+(HEAD-SILL)/2,winMat,false);}
+    else piece(mt,hw,WALL_H-HEAD,SLAB_T+HEAD+(WALL_H-HEAD)/2,wallMat,true);cur=e;});
+  if(cur<len-0.01)wallSeg(cur,len);}
+RW.forEach(w=>buildWall(w[0],w[1],w[2],w[3]));
 
 // ---- per-room highlight volumes (always raycastable, invisible until lit) ----
 const roomMeshes={},roomSprites={};
-function labelSprite(text,strong){const fs=44,pad=16,c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.font=`${fs}px Georgia,"Songti SC",serif`;const tw=ctx.measureText(text).width;c.width=Math.ceil(tw+pad*2);c.height=Math.ceil(fs+pad*2);ctx.font=`${fs}px Georgia,"Songti SC",serif`;ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillStyle=strong?'rgba(179,74,38,0.95)':'rgba(43,40,35,0.55)';ctx.fillText(text,c.width/2,c.height/2);const tex=new THREE.CanvasTexture(c);tex.anisotropy=4;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false}));const s=0.012;spr.scale.set(c.width*s,c.height*s,1);spr._tex=tex;return spr;}
+function labelSprite(text,strong){const fs=44,pad=20,ls='4px',c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.font=`${fs}px Georgia,"Songti SC",serif`;ctx.letterSpacing=ls;const tw=ctx.measureText(text).width;c.width=Math.ceil(tw+pad*2);c.height=Math.ceil(fs+pad*2);ctx.font=`${fs}px Georgia,"Songti SC",serif`;ctx.letterSpacing=ls;ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillStyle=strong?'rgba(179,74,38,0.95)':'rgba(43,40,35,0.55)';ctx.fillText(text,c.width/2,c.height/2);const tex=new THREE.CanvasTexture(c);tex.anisotropy=4;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false}));const s=0.012;spr.scale.set(c.width*s,c.height*s,1);spr._tex=tex;return spr;}
 if(!lowConf){   // precise per-room volumes only when geometry is trustworthy
 D.rooms.forEach(r=>{const[rx,ry,rw,rh]=r.rect.map(Number);if(![rx,ry,rw,rh].every(isFinite)||rw<=0||rh<=0)return;
   const box=new THREE.Mesh(new THREE.BoxGeometry(rw,WALL_H,rh),new THREE.MeshStandardMaterial({color:0xb34a26,transparent:true,opacity:0,roughness:0.7,emissive:0x000000}));
   box.position.set(rx+rw/2,SLAB_T+WALL_H/2,ry+rh/2);box.userData.name=r.name;building.add(box);roomMeshes[r.name]=box;
-  const spr=labelSprite(r.name,false);spr.position.set(rx+rw/2,SLAB_T+WALL_H+0.65,ry+rh/2);building.add(spr);roomSprites[r.name]=spr;
-  (validWins(r)||[]).forEach(wd=>{let wx,wz,wlen,rot;     // glass window — exterior walls only
-    if(wd==='up'){wx=rx+rw/2;wz=ry;wlen=Math.min(rw*0.6,1.6);rot=0;}
-    else if(wd==='down'){wx=rx+rw/2;wz=ry+rh;wlen=Math.min(rw*0.6,1.6);rot=0;}
-    else if(wd==='left'){wx=rx;wz=ry+rh/2;wlen=Math.min(rh*0.6,1.6);rot=Math.PI/2;}
-    else{wx=rx+rw;wz=ry+rh/2;wlen=Math.min(rh*0.6,1.6);rot=Math.PI/2;}
-    const win=new THREE.Mesh(new THREE.BoxGeometry(wlen,WALL_H*0.44,WALL_T*1.8),winMat);
-    win.position.set(wx,SLAB_T+WALL_H*0.52,wz);win.rotation.y=rot;building.add(win);});});
+  const spr=labelSprite(r.name,false);spr.position.set(rx+rw/2,SLAB_T+WALL_H+0.65,ry+rh/2);spr.userData.minor=rw*rh<4;spr.visible=!spr.userData.minor;building.add(spr);roomSprites[r.name]=spr;  // 小房间(<4㎡)默认隐藏名,防 3D 斜视标签叠成一团;hover/点亮时显示
+  });   // windows are now real openings cut into the walls (buildWall), not glass slabs glued onto rooms
 }else{   // degraded: a clean outer massing + a floating "识别到 N 间" tag, no fake room placement
   const tag=labelSprite('识别到 '+D.rooms.length+' 间 · 体量估算',false);tag.position.set(cx,SLAB_T+WALL_H+0.9,cz);building.add(tag);
 }
+// open balcony: a slab projecting off the south face + a waist-high glass balustrade on its 3 outer edges (inner edge open against the building wall)
+if(D.balcony&&!lowConf){const bx=D.balcony.x,bz=D.balcony.z,bw=D.balcony.w,bd=D.balcony.d,RAIL=1.0,RT=0.08;
+  const bslab=new THREE.Mesh(new THREE.BoxGeometry(bw,SLAB_T*0.7,bd),slabMat);bslab.position.set(bx+bw/2,SLAB_T*0.35,bz+bd/2);bslab.castShadow=true;bslab.receiveShadow=true;building.add(bslab);
+  const rail=(x1,z1,x2,z2)=>{const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<0.01)return;const rot=-Math.atan2(dz,dx),mx=(x1+x2)/2,mz=(z1+z2)/2;
+    const base=new THREE.Mesh(new THREE.BoxGeometry(len,0.12,RT),wallMat);base.position.set(mx,SLAB_T*0.7+0.06,mz);base.rotation.y=rot;base.castShadow=true;building.add(base);
+    const glass=new THREE.Mesh(new THREE.BoxGeometry(len,RAIL-0.20,RT*0.5),winMat);glass.position.set(mx,SLAB_T*0.7+0.14+(RAIL-0.20)/2,mz);glass.rotation.y=rot;building.add(glass);
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(len,0.05,RT*1.5),wallMat);cap.position.set(mx,SLAB_T*0.7+RAIL,mz);cap.rotation.y=rot;cap.castShadow=true;building.add(cap);};
+  rail(bx,bz+bd,bx+bw,bz+bd); rail(bx,bz,bx,bz+bd); rail(bx+bw,bz,bx+bw,bz+bd);
+  const bspr=labelSprite('阳台',false);bspr.position.set(bx+bw/2,SLAB_T+0.6,bz+bd/2);bspr.userData.minor=true;bspr.visible=false;building.add(bspr);roomSprites['阳台']=bspr;}
 
 // ---- highlight state ----
 let lockedLens=null,hoverRoom=null;
 function paint(){const lit=new Set(hoverRoom?[hoverRoom]:(lockedLens&&D.lenses[lockedLens]?D.lenses[lockedLens].rooms:[]));
   D.rooms.forEach(r=>{const on=lit.has(r.name),m=roomMeshes[r.name],s=roomSprites[r.name];if(m){m.material.opacity=on?0.26:0;m.material.emissive.setHex(on?0x5a1e0c:0x000000);}
-    if(s){const fresh=labelSprite(r.name,on);s.material.map=fresh._tex;s.material.needsUpdate=true;}});}
+    if(s){s.visible=on||!s.userData.minor;const fresh=labelSprite(r.name,on);s.material.map=fresh._tex;s.material.needsUpdate=true;}});}
 function setHover(n){hoverRoom=n;paint();syncChips();}
 function setLens(k){lockedLens=(lockedLens===k)?null:k;hoverRoom=null;paint();syncChips();syncLenses();}
 
@@ -293,7 +308,7 @@ function southPos(){const s={up:'down',right:'left',down:'up',left:'right'}[nort
 function clearDay(){while(dayGroup.children.length)dayGroup.remove(dayGroup.children[0]);
   D.rooms.forEach(r=>{const m=roomMeshes[r.name],s=roomSprites[r.name];
     if(m){m.material.opacity=0;m.material.color.setHex(0xb34a26);m.material.emissive.setHex(0x000000);}
-    if(s){const f=labelSprite(r.name,false);s.material.map=f._tex;s.material.needsUpdate=true;}});}
+    if(s){s.visible=!s.userData.minor;const f=labelSprite(r.name,false);s.material.map=f._tex;s.material.needsUpdate=true;}});}
 function applyDay(){clearDay();
   // south-edge sun marker (just outside the footprint, fixed height so it reads from top-down)
   const seMap={up:[cx,H+0.7],down:[cx,-0.7],left:[-0.7,cz],right:[W+0.7,cz]};
@@ -311,7 +326,8 @@ function applyDay(){clearDay();
       else if(wd==='left'){a=[rx,ry+rh*0.28];b=[rx,ry+rh*0.72];}else{a=[rx+rw,ry+rh*0.28];b=[rx+rw,ry+rh*0.72];}
       const L=Math.hypot(b[0]-a[0],b[1]-a[1]);const wb=new THREE.Mesh(new THREE.BoxGeometry(L,0.06,0.2),new THREE.MeshBasicMaterial({color:0x2a6f8f}));
       wb.position.set((a[0]+b[0])/2,SLAB_T+0.2,(a[1]+b[1])/2);wb.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);dayGroup.add(wb);});
-    const lab=`${r.name} ${DAYTXT[d.score]}${d.best?'·'+CM[d.best]+'向':''}`;const sprl=labelSprite(lab,d.score>=2);sprl.scale.multiplyScalar(0.62);sprl.position.set(rx+rw/2,1.5,ry+rh/2);dayGroup.add(sprl);});}
+    const minorR=rw*rh<5;   // 小房间只留房名(内间无窗,采光后缀冗余且会溢出邻居),大房间显示完整采光
+    const lab=minorR?r.name:`${r.name} ${DAYTXT[d.score]}${d.best?'·'+CM[d.best]+'向':''}`;const sprl=labelSprite(lab,d.score>=2);sprl.scale.multiplyScalar(minorR?0.4:0.5);sprl.position.set(rx+rw/2,1.5,ry+rh/2);dayGroup.add(sprl);});}
 // 动线视图：把"建筑师看进门怎么走"降维成图上一眼可见的路径（示意走向，非门精确连接）
 function applyCirc(){clearDay();
   const _ent=D.rooms.find(r=>/玄関|玄关|入口|entr|porch|ポーチ/i.test(r.name));   // use the REAL 玄关 room
@@ -330,7 +346,7 @@ function applyCirc(){clearDay();
     const ring=new THREE.Mesh(new THREE.CircleGeometry(0.46,20),new THREE.MeshBasicMaterial({color:0xfbf7ee}));ring.rotation.x=-Math.PI/2;ring.position.set(p.c[0],SLAB_T+0.15,p.c[1]);dayGroup.add(ring);
     const rl=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CircleGeometry(0.46,20)),new THREE.LineBasicMaterial({color:0xb34a26}));rl.rotation.x=-Math.PI/2;rl.position.set(p.c[0],SLAB_T+0.16,p.c[1]);dayGroup.add(rl);
     const num=labelSprite(String(i+1),true);num.scale.multiplyScalar(0.46);num.position.set(p.c[0],1.25,p.c[1]);dayGroup.add(num);
-    const nm=labelSprite(p.name,false);nm.scale.multiplyScalar(0.48);nm.position.set(p.c[0],0.72,p.c[1]);dayGroup.add(nm);});
+    const nm=labelSprite(p.name,false);nm.scale.multiplyScalar(0.42);nm.position.set(p.c[0],0.72,p.c[1]);dayGroup.add(nm);});
   const note=labelSprite('动线示意 · 按房间位置推的可能走向',false);note.scale.multiplyScalar(0.5);note.position.set(cx,0.6,-0.9);dayGroup.add(note);}
 
 // 无障碍视图：标关注点(湿区/玄关高差/窄通行)，非精确合规——门宽/台阶需现场确认
@@ -346,7 +362,7 @@ function applyA11y(){clearDay();
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rh),new THREE.MeshBasicMaterial({color:a.color,transparent:true,opacity:a.lvl?0.85:0.42,side:THREE.DoubleSide,depthWrite:false}));
     fl.rotation.x=-Math.PI/2;fl.position.set(rx+rw/2,SLAB_T+0.06,ry+rh/2);dayGroup.add(fl);
     const ln=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(rw,rh)),new THREE.LineBasicMaterial({color:0x5e4f37}));ln.rotation.x=-Math.PI/2;ln.position.set(rx+rw/2,SLAB_T+0.09,ry+rh/2);dayGroup.add(ln);
-    const sp=labelSprite(`${r.name} · ${a.txt}`,!!a.lvl);sp.scale.multiplyScalar(0.5);sp.position.set(rx+rw/2,1.5,ry+rh/2);dayGroup.add(sp);});
+    const sp=labelSprite(`${r.name} · ${a.txt}`,!!a.lvl);sp.scale.multiplyScalar(0.44);sp.position.set(rx+rw/2,1.5,ry+rh/2);dayGroup.add(sp);});
   const note=labelSprite('♿ 提示关注点 · 非精确合规审计（门宽/台阶需现场确认）',false);note.scale.multiplyScalar(0.5);note.position.set(cx,0.6,-0.9);dayGroup.add(note);}
 
 let inOverlay=false;
