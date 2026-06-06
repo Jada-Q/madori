@@ -203,13 +203,13 @@ function buildWall(x1,z1,x2,z2){const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if
 RW.forEach(w=>buildWall(w[0],w[1],w[2],w[3]));
 
 // ---- per-room highlight volumes (always raycastable, invisible until lit) ----
-const roomMeshes={},roomSprites={};
+const roomMeshes={},roomSprites={},allMeshes=[];   // roomMeshes keyed by name (last wins on dup) only for legacy length checks; per-room control goes through r._mesh / r._spr so duplicate-named rooms (两个卧室) each get their own mesh
 function labelSprite(text,strong){const fs=44,pad=20,ls='4px',c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.font=`${fs}px Georgia,"Songti SC",serif`;ctx.letterSpacing=ls;const tw=ctx.measureText(text).width;c.width=Math.ceil(tw+pad*2);c.height=Math.ceil(fs+pad*2);ctx.font=`${fs}px Georgia,"Songti SC",serif`;ctx.letterSpacing=ls;ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillStyle=strong?'rgba(179,74,38,0.95)':'rgba(43,40,35,0.55)';ctx.fillText(text,c.width/2,c.height/2);const tex=new THREE.CanvasTexture(c);tex.anisotropy=4;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false}));const s=0.012;spr.scale.set(c.width*s,c.height*s,1);spr._tex=tex;return spr;}
 if(!lowConf){   // precise per-room volumes only when geometry is trustworthy
 D.rooms.forEach(r=>{const[rx,ry,rw,rh]=r.rect.map(Number);if(![rx,ry,rw,rh].every(isFinite)||rw<=0||rh<=0)return;
   const box=new THREE.Mesh(new THREE.BoxGeometry(rw,WALL_H,rh),new THREE.MeshStandardMaterial({color:0xb34a26,transparent:true,opacity:0,roughness:0.7,emissive:0x000000}));
-  box.position.set(rx+rw/2,SLAB_T+WALL_H/2,ry+rh/2);box.userData.name=r.name;building.add(box);roomMeshes[r.name]=box;
-  const spr=labelSprite(r.name,false);spr.position.set(rx+rw/2,SLAB_T+WALL_H+0.65,ry+rh/2);spr.userData.minor=rw*rh<4;spr.visible=!spr.userData.minor;building.add(spr);roomSprites[r.name]=spr;  // 小房间(<4㎡)默认隐藏名,防 3D 斜视标签叠成一团;hover/点亮时显示
+  box.position.set(rx+rw/2,SLAB_T+WALL_H/2,ry+rh/2);box.userData.name=r.name;building.add(box);r._mesh=box;allMeshes.push(box);roomMeshes[r.name]=box;
+  const spr=labelSprite(r.name,false);spr.position.set(rx+rw/2,SLAB_T+WALL_H+0.65,ry+rh/2);spr.userData.minor=rw*rh<4;spr.visible=!spr.userData.minor;building.add(spr);r._spr=spr;roomSprites[r.name]=spr;  // 小房间(<4㎡)默认隐藏名,防 3D 斜视标签叠成一团;hover/点亮时显示
   });   // windows are now real openings cut into the walls (buildWall), not glass slabs glued onto rooms
 }else{   // degraded: a clean outer massing + a floating "识别到 N 间" tag, no fake room placement
   const tag=labelSprite('识别到 '+D.rooms.length+' 间 · 体量估算',false);tag.position.set(cx,SLAB_T+WALL_H+0.9,cz);building.add(tag);
@@ -227,7 +227,7 @@ if(D.balcony&&!lowConf){const bx=D.balcony.x,bz=D.balcony.z,bw=D.balcony.w,bd=D.
 // ---- highlight state ----
 let lockedLens=null,hoverRoom=null;
 function paint(){const lit=new Set(hoverRoom?[hoverRoom]:(lockedLens&&D.lenses[lockedLens]?D.lenses[lockedLens].rooms:[]));
-  D.rooms.forEach(r=>{const on=lit.has(r.name),m=roomMeshes[r.name],s=roomSprites[r.name];if(m){m.material.opacity=on?0.26:0;m.material.emissive.setHex(on?0x5a1e0c:0x000000);}
+  D.rooms.forEach(r=>{const on=lit.has(r.name),m=r._mesh,s=r._spr;if(m){m.material.opacity=on?0.26:0;m.material.emissive.setHex(on?0x5a1e0c:0x000000);}
     if(s){s.visible=on||!s.userData.minor;const fresh=labelSprite(r.name,on);s.material.map=fresh._tex;s.material.needsUpdate=true;}});}
 function setHover(n){hoverRoom=n;paint();syncChips();}
 function setLens(k){lockedLens=(lockedLens===k)?null:k;hoverRoom=null;paint();syncChips();syncLenses();}
@@ -262,7 +262,7 @@ function syncLenses(){[...lensWrap.children].forEach(e=>e.classList.toggle('on',
 // ---- raycast: click a room in 3D ----
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown',e=>{mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);
-  const hits=ray.intersectObjects(Object.values(roomMeshes));if(hits.length){const n=hits[0].object.userData.name;lockedLens=null;hoverRoom=(hoverRoom===n?null:n);paint();syncChips();syncLenses();}});
+  const hits=ray.intersectObjects(allMeshes);if(hits.length){const n=hits[0].object.userData.name;lockedLens=null;hoverRoom=(hoverRoom===n?null:n);paint();syncChips();syncLenses();}});
 
 // ---- low-confidence geometry banner ----
 if(lowConf){document.getElementById('geowarn').style.display='block';
@@ -306,7 +306,7 @@ function dayScore(r){const vw=validWins(r),byWin=vw!==null;const dirs=byWin?vw:r
 function southPos(){const s={up:'down',right:'left',down:'up',left:'right'}[northDir],off=Math.max(W,H)*0.55;
   return {up:[cx,-off],right:[W+off,cz],down:[cx,H+off],left:[-off,cz]}[s];}
 function clearDay(){while(dayGroup.children.length)dayGroup.remove(dayGroup.children[0]);
-  D.rooms.forEach(r=>{const m=roomMeshes[r.name],s=roomSprites[r.name];
+  D.rooms.forEach(r=>{const m=r._mesh,s=r._spr;
     if(m){m.material.opacity=0;m.material.color.setHex(0xb34a26);m.material.emissive.setHex(0x000000);}
     if(s){s.visible=!s.userData.minor;const f=labelSprite(r.name,false);s.material.map=f._tex;s.material.needsUpdate=true;}});}
 function applyDay(){clearDay();
@@ -315,7 +315,7 @@ function applyDay(){clearDay();
   const se=seMap[northDir]||seMap.up;
   const sun=new THREE.Mesh(new THREE.SphereGeometry(0.45,18,18),new THREE.MeshBasicMaterial({color:0xffb24d}));sun.position.set(se[0],1.4,se[1]);dayGroup.add(sun);
   const sl=labelSprite('☀ 南',true);sl.position.set(se[0],2.1,se[1]);dayGroup.add(sl);
-  if(!Object.keys(roomMeshes).length){const note=labelSprite('整屋朝向已示意 · 房间级采光需清晰图(high)',false);note.position.set(cx,1.6,cz);dayGroup.add(note);return;}
+  if(!allMeshes.length){const note=labelSprite('整屋朝向已示意 · 房间级采光需清晰图(high)',false);note.position.set(cx,1.6,cz);dayGroup.add(note);return;}
   // per-room: floor color block + crisp border + label, all in world space (not flattened)
   D.rooms.forEach(r=>{const d=dayScore(r);const[rx,ry,rw,rh]=r.rect.map(Number);
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rh),new THREE.MeshBasicMaterial({color:DAYCOLOR[d.score],transparent:true,opacity:d.score===0?0.6:0.92,side:THREE.DoubleSide,depthWrite:false}));
@@ -334,7 +334,7 @@ function applyCirc(){clearDay();
   const ENTRY=_ent?[_ent.rect[0]+_ent.rect[2]/2,_ent.rect[1]+_ent.rect[3]/2]:[cx,H+0.3];
   const em=new THREE.Mesh(new THREE.CircleGeometry(0.4,24),new THREE.MeshBasicMaterial({color:0xb34a26}));em.rotation.x=-Math.PI/2;em.position.set(ENTRY[0],SLAB_T+0.1,ENTRY[1]);dayGroup.add(em);
   const el=labelSprite('玄关 入口',true);el.scale.multiplyScalar(0.6);el.position.set(ENTRY[0],1.4,ENTRY[1]);dayGroup.add(el);
-  if(!Object.keys(roomMeshes).length){const n=labelSprite('动线需清晰图(high)',false);n.position.set(cx,1.5,cz);dayGroup.add(n);return;}
+  if(!allMeshes.length){const n=labelSprite('动线需清晰图(high)',false);n.position.set(cx,1.5,cz);dayGroup.add(n);return;}
   const pts=D.rooms.filter(r=>r!==_ent).map(r=>{const rc=r.rect.map(Number),[x,y,w,h]=rc;return{name:r.name,c:[x+w/2,y+h/2],rc};});
   const order=[],used=new Set();let cur=ENTRY;                    // 最近邻顺序 = 可能的走法
   while(order.length<pts.length){let bi=-1,bd=1e9;pts.forEach((p,i)=>{if(used.has(i))return;const dd=Math.hypot(p.c[0]-cur[0],p.c[1]-cur[1]);if(dd<bd){bd=dd;bi=i;}});if(bi<0)break;used.add(bi);order.push(pts[bi]);cur=pts[bi].c;}
@@ -357,7 +357,7 @@ function a11yClass(r){const n=coreName(r.name),[,,w,h]=r.rect.map(Number),md=Mat
   if(md<1.4)return{lvl:1,txt:'通行偏窄·轮椅难',color:0xd9b84a};
   return{lvl:0,txt:'通行空间充足',color:0x8fbf8a};}
 function applyA11y(){clearDay();
-  if(!Object.keys(roomMeshes).length){const n=labelSprite('无障碍提示需清晰图(high)',false);n.position.set(cx,1.5,cz);dayGroup.add(n);return;}
+  if(!allMeshes.length){const n=labelSprite('无障碍提示需清晰图(high)',false);n.position.set(cx,1.5,cz);dayGroup.add(n);return;}
   D.rooms.forEach(r=>{const a=a11yClass(r);const[rx,ry,rw,rh]=r.rect.map(Number);
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(rw,rh),new THREE.MeshBasicMaterial({color:a.color,transparent:true,opacity:a.lvl?0.85:0.42,side:THREE.DoubleSide,depthWrite:false}));
     fl.rotation.x=-Math.PI/2;fl.position.set(rx+rw/2,SLAB_T+0.06,ry+rh/2);dayGroup.add(fl);
