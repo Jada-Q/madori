@@ -29,7 +29,7 @@ nav .logo span{color:var(--soft);font-weight:500;}
 nav .links{display:flex;gap:28px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;align-items:center;}
 nav .links a{color:var(--soft);text-decoration:none;transition:color .15s;}
 nav .links a:hover{color:var(--char);}
-nav .links a.gh{color:var(--char);border:1px solid var(--char);padding:7px 13px;}
+nav .links a.gh{color:var(--char);border:1px solid var(--char);padding:7px 13px;text-transform:none;}
 nav .links a.gh:hover{background:var(--char);color:#fff;}
 @media(max-width:720px){nav .links a.hide-m{display:none;}}
 /* hero */
@@ -48,6 +48,7 @@ nav .links a.gh:hover{background:var(--char);color:#fff;}
 .btn-1:hover{background:var(--char);}
 .btn-2{background:transparent;color:var(--char);border:1px solid var(--char);}
 .btn-2:hover{background:var(--char);color:#fff;}
+.btn.gh{text-transform:none;}   /* GitHub 是品牌专有名，保持驼峰不大写 */
 /* exhibit */
 .exhibit{margin:46px 0 0;background:var(--bone2);border:1px solid var(--line);position:relative;line-height:0;}
 .exhibit img{width:100%;display:block;}
@@ -254,7 +255,7 @@ footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   <div class="cta">
     <a href="madori.html" class="btn btn-1">在线试用白模 →</a>
     <a href="demo/madori-demo.mp4" class="btn btn-2">看 90 秒 Demo</a>
-    <a href="https://github.com/Jada-Q/madori" class="btn btn-2">GitHub 源码</a>
+    <a href="https://github.com/Jada-Q/madori" class="btn btn-2 gh">GitHub 源码</a>
   </div>
 </div></section>
 
