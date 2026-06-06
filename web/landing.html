@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Madori · 户型解读 — 把建筑师的读图能力，降维成一眼看懂</title>
 <meta name="description" content="一张户型图 → 3D 白模 + 四个专业视图（解读 / 采光 / 动线 / 无障碍）。用 Gemma 4 多模态视觉，把建筑师的读图能力交给每个人。">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+/* 自托管字体（子集化，去 Google Fonts CDN 依赖 → 中国大陆也稳） */
+@font-face{font-family:"Noto Serif SC";src:url(fonts/noto-serif-sc.woff2) format("woff2");font-weight:400 900;font-display:swap;}
+@font-face{font-family:"Noto Sans SC";src:url(fonts/noto-sans-sc.woff2) format("woff2");font-weight:400 900;font-display:swap;}
+@font-face{font-family:"Space Mono";src:url(fonts/space-mono-400.woff2) format("woff2");font-weight:400;font-display:swap;}
+@font-face{font-family:"Space Mono";src:url(fonts/space-mono-700.woff2) format("woff2");font-weight:700;font-display:swap;}
 :root{
   --bone:#ffffff; --bone2:#f4f3f0; --bone3:#faf9f6; --char:#1a1a18; --soft:#76726a; --faint:#a8a297;
   --orange:#ff5a1f; --orange2:#e8480f; --line:#e7e4dd; --line2:#dedacf;
