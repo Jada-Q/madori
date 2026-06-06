@@ -51,9 +51,9 @@ nav .links a.gh:hover{background:var(--char);color:#fff;}
 /* exhibit */
 .exhibit{margin:46px 0 0;background:var(--bone2);border:1px solid var(--line);position:relative;line-height:0;}
 .exhibit img{width:100%;display:block;}
-.exhibit .mlabel{position:absolute;left:20px;bottom:20px;background:var(--bone);border:1px solid var(--line);padding:11px 16px;line-height:1.5;}
-.exhibit .mlabel .t{font-family:var(--serif);font-weight:700;font-size:14px;}
-.exhibit .mlabel .m{font-family:var(--mono);font-size:10px;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;}
+.exhibit .mlabel{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);padding:8px 13px;line-height:1.45;}
+.exhibit .mlabel .t{font-family:var(--serif);font-weight:700;font-size:13px;}
+.exhibit .mlabel .m{font-family:var(--mono);font-size:9px;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;}
 .exhibit .idx{position:absolute;right:22px;top:18px;font-family:var(--mono);font-size:11px;color:var(--soft);}
 .exhibit .idx b{color:var(--orange);}
 /* section */
@@ -141,7 +141,12 @@ footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   .arrow{transform:rotate(90deg);padding:6px 0;}
   .foot{padding:64px 0;}
   .foot h2{font-size:30px;line-height:1.38;}
-  footer .in{flex-direction:column;gap:6px;}
+  footer .in{flex-direction:column;gap:7px;}
+  footer span{overflow-wrap:normal;}            /* 覆盖移动端 anywhere：英文只在空格断，配 &nbsp; 不留孤字 */
+  .exhibit .mlabel{left:12px;bottom:12px;padding:6px 10px;}
+  .exhibit .mlabel .t{font-size:12px;}
+  .exhibit .mlabel .m{display:none;}            /* 移动端隐副标题，卡片更小、不压住白模 */
+  .exhibit .idx{font-size:10px;}
 }
 </style>
 </head>
@@ -247,8 +252,8 @@ footer .in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 </div></section>
 
 <footer><div class="wrap in">
-  <span>Madori · 户型解读 — Read any floor plan with Gemma 4</span>
-  <span>GDG Shanghai Gemma4 Hackathon · 赛道 B · Multimodal</span>
+  <span>Madori · 户型解读 — Read any floor plan with Gemma&nbsp;4</span>
+  <span>GDG Shanghai Gemma4 Hackathon · 赛道&nbsp;B&nbsp;·&nbsp;Multimodal</span>
 </div></footer>
 
 </body>
