@@ -26,3 +26,9 @@ spike_out.html
 *.log
 .playwright-mcp/
 last_reading_precise.json
+web/mockups/
+pipeline/shoot_mockups*.mjs
+pipeline/shoot_c2*.mjs
+pipeline/shoot_ghi.mjs
+pipeline/shoot_e.mjs
+pipeline/shoot_landing.mjs
