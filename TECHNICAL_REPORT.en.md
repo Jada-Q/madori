@@ -97,6 +97,18 @@ This is not a flashy toy; it solves a real, widespread, and unfair information g
 
 ---
 
+## 5.5 Scalability
+
+Scalability is guaranteed by the architecture, not bolted on afterward — three layers each scale independently:
+
+- **Data axis (any plan, drop-in)**: `extract → lock → multi-lens` is decoupled from any specific floor plan — zero "for-this-image" hardcoding. Gemma 4's multimodality consumes both the visual (lines/walls) and in-image text (room names/dimensions) at once, so **across plan types and annotation languages** everything runs through the same pipeline; supporting a new kind of drawing = 0 lines of code.
+- **Model axis (privacy↔precision scaling)**: the same orchestration switches between local `gemma4:e4b` and cloud `gemma-4-31b` via a single `MADORI_MODEL` env var, with zero change to business logic. The small model keeps privacy/offline/free; the large model adds precision/throughput — both Gemma 4, capability scaling with spec (empirically validated: 31b precisely reconstructs 15 rooms).
+- **Scenario axis (all of Japan's real buildings)**: Leg B geometry comes from PLATEAU open data + deterministic grid codes (JIS X 0410); any coordinate auto-locates and fetches the building, **no per-building modeling**, covering the whole country by administrative grid.
+
+**Deployment scaling**: the pipeline is stateless and the deterministic tool layer is pure functions, so cloud mode scales horizontally; local mode is a complete product on a single consumer Mac (M4 Pro 24GB) — both the privacy end and the scale end hold.
+
+---
+
 ## 6. Honest engineering (this is part of the product, and an engineering highlight)
 
 - **Confidence downgrade**: when dense annotations / photo distortion make geometry unreadable, the 3D does not render a deceptively fine model — it falls back to a clean outline + a "geometry is estimated" note.

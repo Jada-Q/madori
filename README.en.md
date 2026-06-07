@@ -80,6 +80,18 @@ Specifically, it's especially useful for:
 
 ---
 
+## Scalability
+
+Madori's scalability isn't a slogan — it's three layers of scaling built into the architecture:
+
+1. **Any plan, zero code changes** — `extract → lock → multi-lens` is plan-agnostic: Gemma 4 reads both the lines (visual) and the room names/dimensions (in-image text) at once, so **any floor plan, in any annotation language** runs through the same pipeline — not a single line of "for-this-specific-image" hardcoding.
+2. **Privacy ⟷ precision, scaled by one variable** — the same Gemma 4 orchestration switches between local `e4b` (offline / private / free) and cloud `31b` (high precision / high throughput) via a single `MADORI_MODEL` env var, with no change to business logic. Privacy-first individuals run local; batch-precision needs go cloud.
+3. **Real buildings across all of Japan** — Leg B's geometry comes from PLATEAU open data + deterministic grid codes (JIS X 0410): any coordinate → auto-locate and fetch the building, **no per-building modeling needed**, covering the whole country by construction.
+
+Deployment: the pipeline is stateless, so cloud mode scales horizontally; local mode runs on a consumer Mac (M4 Pro 24GB) — one machine is the whole product.
+
+---
+
 ## How to use
 
 **Prerequisites**: [Ollama](https://ollama.com) installed locally, with the Gemma 4 multimodal model pulled.
