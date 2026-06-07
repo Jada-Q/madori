@@ -173,7 +173,7 @@ This honesty is itself part of the product. Please read this section carefully.
   ⚠️ **For any decision involving law, safety, or structure, please consult a licensed professional.** Madori is a starting point for understanding, not a basis for signing off.
 - **Orientation unmarked → daylight says "unknown."** When the drawing doesn't mark N/E/S/W, daylight analysis can only offer limited info. In that case the AI explicitly says "unknown" — it **will not** fabricate a plausible-sounding orientation to fool you.
 - **Room coordinates are approximate.** Room positions / dimensions extracted from the image are estimates, so **the 3D white model and room labels are "indicative,"** not survey-grade. Don't use them to estimate construction or put down a deposit.
-- **Best suited to clean listing-style floor plans.** It reads cleanest on tidy real-estate floor plans; densely annotated, line-heavy professional CAD drawings (with lots of dimensions / symbols / text) are harder and results may degrade.
+- **Best suited to clean listing-style plans with room-name text labels.** It reads cleanest on tidy real-estate floor plans that spell out "living room / bedroom / kitchen" (the model relies on reading those labels to identify rooms). **Known out of scope** (results unreliable — will downgrade or misread): ① densely annotated color plans (area m² numbers get confused with coordinates); ② dark-background CAD technical drawings (dense lines + furniture symbols + often no room names); ③ plans with no room-name text at all. Don't rely on the geometry output for these.
 
 ---
 
