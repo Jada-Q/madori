@@ -49,7 +49,23 @@ const orbitQuarter = () => page.evaluate(() => new Promise(res => {
 
 console.log('▸ 录制中…');
 await page.goto('http://localhost:8877/madori.html', { waitUntil: 'networkidle' });
-await wait(2200);
+await wait(500);   // 仅等 three.js 初始化，不留立体预卷
+
+// ═══ 开场：先看平面 → 滑旋钮展开成立体 → 绕一圈看四个面 → 收回平面继续讲解 ═══
+await clickId('tabRead');
+// 1) 立刻摊平为平面 —— 开场第一眼就是「平面图」（砍掉默认立体预卷）
+await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 0; m.dispatchEvent(new Event('input')); }); await wait(2800);
+// 2) 平滑展开 平面 → 立体（拖动 morph 旋钮）
+await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2200;
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(t*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
+await wait(1300);
+// 3) 绕模型一圈，四个面各停一下
+for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1100); }
+await wait(800);
+// 4) 收回平面，回到二维继续讲解
+await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 1600;
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round((1-t)*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
+await wait(1200);
 
 // ═══ 钩子：看不懂 → 一眼懂（最强对比）═══
 // 1) 全屏源图：密密麻麻的户型图，"你看得懂吗？"
@@ -83,18 +99,6 @@ await page.fill('#areaIn', '66'); await wait(2400);
 // 动线 + 无障碍
 await clickId('tabCirc'); await wait(2400);
 await clickId('tabA11y'); await wait(2400);
-
-// ═══ 收尾：先看平面 → 展开成立体 → 绕一圈看四个面 ═══
-await clickId('tabRead'); await wait(1500);
-// 1) 先点出平面，停一下看清
-await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 0; m.dispatchEvent(new Event('input')); }); await wait(2400);
-// 2) 平滑展开 平面 → 立体
-await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2200;
-  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(t*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
-await wait(1300);
-// 3) 绕模型一圈，四个面各停一下
-for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1100); }
-await wait(800);
 
 await ctx.close();                                  // flush video
 await browser.close();
