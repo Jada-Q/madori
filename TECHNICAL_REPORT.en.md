@@ -111,6 +111,9 @@ Scalability is guaranteed by the architecture, not bolted on afterward — three
 
 ## 6. Honest engineering (this is part of the product, and an engineering highlight)
 
+![Honest downgrade in practice: a dirty image (geometry confidence low) falls back to an outline + estimate annotation](web/assets/honest-downgrade.png)
+> Above is a real run: feed a photo-distorted dirty image (`GEOM: low`, fill ratio 0.12) and the 3D auto-downgrades to an outline + "⚠ geometry is estimated," while room detection and the five-lens reading still output normally.
+
 - **Confidence downgrade**: when dense annotations / photo distortion make geometry unreadable, the 3D does not render a deceptively fine model — it falls back to a clean outline + a "geometry is estimated" note.
 - **Honesty grading**: daylight is a **deterministic geometric computation** (made real); circulation/accessibility are **indicative/hints** (clearly labeled, not posing as precise); the 3D white model is always "massing indication · not a source-accurate reconstruction."
 - **No fabricated numbers**: what the drawing doesn't mark (orientation / door width) the model says is "unknown" — it won't fabricate a plausible-sounding answer.

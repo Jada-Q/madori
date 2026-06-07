@@ -66,6 +66,14 @@ When switching views, the camera **transitions smoothly** and auto-tops-down int
 
 ---
 
+### Honest downgrade (edge-case handling)
+
+![Honest downgrade: a dirty image falls back to an outline + estimate annotation](web/assets/honest-downgrade.png)
+
+> Feed it a **densely annotated / photo-distorted** dirty image (geometry confidence `low`, fill ratio 0.12) and the 3D **won't** force a deceptively precise model — it falls back to a white outline + a top "⚠ geometry is estimated" warning, noting that "room detection and multi-dimensional reading are unaffected." **Clean image = precise white model, dirty image = honest outline** — two outputs of the same confidence gate.
+
+---
+
 ## Why it matters (social value)
 
 This is not a tech-demo toy. It addresses a real, widespread, and unfair information gap.
