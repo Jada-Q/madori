@@ -166,6 +166,9 @@ const scene=new THREE.Scene();const BG=new THREE.Color(0xefe9df);scene.backgroun
 const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,0.1,5000);
 camera.position.set(cx+frame*1.1,frame*1.0+WALL_H,cz+frame*1.45);
 const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=0.06;controls.minDistance=frame*0.5;controls.maxDistance=frame*6;controls.maxPolarAngle=Math.PI*0.495;controls.target.set(cx,WALL_H*0.4,cz);
+const READ_PANEL=392; // .read 右栏宽：桌面端把取景左移半个栏宽，模型不被右栏遮挡（移动端右栏在底部，不偏移）
+function applyViewOffset(){if(innerWidth>820){camera.setViewOffset(innerWidth,innerHeight,Math.round(READ_PANEL/2),0,innerWidth,innerHeight);}else{camera.clearViewOffset();}camera.updateProjectionMatrix();}
+applyViewOffset();
 scene.add(new THREE.HemisphereLight(0xfffaf0,0xd6cdba,0.5));
 const key=new THREE.DirectionalLight(0xfff2e2,1.22);key.position.set(frame*1.0,frame*1.7,frame*0.75);key.castShadow=true;key.shadow.mapSize.set(2048,2048);const sd=frame*1.8;key.shadow.camera.left=-sd;key.shadow.camera.right=sd;key.shadow.camera.top=sd;key.shadow.camera.bottom=-sd;key.shadow.camera.far=frame*8;key.shadow.bias=-0.0004;key.shadow.radius=6;scene.add(key);
 const fill=new THREE.DirectionalLight(0xe6eeff,0.22);fill.position.set(-frame*0.8,frame*0.6,-frame*0.6);scene.add(fill);
@@ -411,7 +414,7 @@ let morphV=100;const ms=document.getElementById('morph'),ml=document.getElementB
 function applyMorph(){building.scale.y=Math.max(morphV/100,0.0001);}
 ms.addEventListener('input',e=>{morphV=+e.target.value;applyMorph();ml.textContent=morphV<=1?'平面':'立体 '+morphV+'%';});
 
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;renderer.setSize(innerWidth,innerHeight);applyViewOffset();});
 // intro ease-in: camera glides from a wider/higher angle to the default framing
 const _ic=camera.position.clone(),_it=controls.target.clone();
 camera.position.set(cx+frame*1.5,frame*2.0+WALL_H,cz+frame*2.1);
