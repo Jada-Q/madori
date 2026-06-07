@@ -39,6 +39,13 @@ const page = await ctx.newPage();
 const SLOW = 1.9;                                   // slower pacing → room for voiceover per shot
 const wait = ms => page.waitForTimeout(Math.round(ms * SLOW));
 const clickId = async id => page.evaluate(i => document.getElementById(i)?.click(), id);
+// 平滑绕模型转 90°（直接绕 target 旋转相机位置，不依赖 setAzimuthalAngle —— three@0.128 OrbitControls 无此法）
+const orbitQuarter = () => page.evaluate(() => new Promise(res => {
+  const tgt = controls.target, off = camera.position.clone().sub(tgt);
+  const r = Math.hypot(off.x, off.z), y = off.y, a0 = Math.atan2(off.z, off.x), dur = 1400, t0 = performance.now();
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur), a = a0 + t*Math.PI/2;
+    camera.position.set(tgt.x + r*Math.cos(a), tgt.y + y, tgt.z + r*Math.sin(a)); controls.update(); t<1?requestAnimationFrame(s):res(); })();
+}));
 
 console.log('▸ 录制中…');
 await page.goto('http://localhost:8877/madori.html', { waitUntil: 'networkidle' });
@@ -52,9 +59,9 @@ await page.evaluate(() => document.getElementById('lightbox')?.click()); await w
 await clickId('tabDay'); await wait(2600);
 
 // ═══ 采光高潮：转朝向实时重算（建筑师能力降维 + 算出来的事实）═══
-for (const d of ['right', 'down', 'left', 'up']) {
+for (const d of ['up', 'right', 'down', 'left']) {   // 北 / 东 / 南 / 西 四个朝向各操作一次 + 停顿看清重算
   await page.evaluate(dir => document.querySelector(`.cbtn[data-dir="${dir}"]`)?.click(), d);
-  await wait(1700);                                 // 慢放，让"重算"看清
+  await wait(1900);
 }
 await wait(1400);
 
@@ -77,12 +84,17 @@ await page.fill('#areaIn', '66'); await wait(2400);
 await clickId('tabCirc'); await wait(2400);
 await clickId('tabA11y'); await wait(2400);
 
-// ═══ 收尾：平面 ⟷ 立体白模 ═══
+// ═══ 收尾：先看平面 → 展开成立体 → 绕一圈看四个面 ═══
 await clickId('tabRead'); await wait(1500);
-for (const v of [0, 40, 80, 100]) {
-  await page.evaluate(val => { const m = document.getElementById('morph'); m.value = val; m.dispatchEvent(new Event('input')); }, v); await wait(850);
-}
-await wait(2000);
+// 1) 先点出平面，停一下看清
+await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 0; m.dispatchEvent(new Event('input')); }); await wait(2400);
+// 2) 平滑展开 平面 → 立体
+await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2200;
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(t*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
+await wait(1300);
+// 3) 绕模型一圈，四个面各停一下
+for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1100); }
+await wait(800);
 
 await ctx.close();                                  // flush video
 await browser.close();
