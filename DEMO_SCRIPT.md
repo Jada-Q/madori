@@ -1,3 +1,5 @@
+**中文** · [English](DEMO_SCRIPT.en.md)
+
 # Demo 视频分镜脚本（≤5 分钟）
 
 > 用于黑客松提交。主体演示**稳定的本地 e4b 四视图版**（`web/madori.html`），云端大 Gemma 4 精度作为技术亮点镜头。
