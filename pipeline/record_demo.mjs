@@ -77,6 +77,7 @@ await wait(1000);
 for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(550); }
 await camTo('default', 700);        // 复位默认 3/4 —— 关键：后续讲解段干净，不被开场相机污染
 await wait(900);
+await page.waitForTimeout(2000);    // +2s：绕完让 3D 模型多定格一会儿再切采光
 
 // ═══ 2. 主角：采光转朝向实时重算（给足时长，全片最重）═══
 await clickId('tabDay'); await wait(2400);
