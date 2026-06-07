@@ -44,10 +44,16 @@ def parse_struct():
         f = re.findall(r'[\d.]+', v)
         if not f: return None
         x = float(f[0]); return x/1000.0 if x > 50 else x          # mm -> m
+    def dim(v):                                                     # outer dimension: sum a "+"-joined chain
+        v = v.split("(")[0]                                        # drop "(或 N)" alternative totals
+        nums = [float(x) for x in re.findall(r'[\d.]+', v)]
+        if not nums: return None
+        s = sum(nums) if len(nums) > 1 else nums[0]                # 1299+2914+3448 -> 7661 (not just 1299)
+        return s/1000.0 if s > 50 else s                          # mm -> m
     for ln in raw.splitlines():
         p = [x.strip(" <>") for x in ln.split("|")]
         if p[0].upper().endswith("DIMS") and len(p) >= 3:
-            W = m(p[1]); H = m(p[2])
+            W = dim(p[1]); H = dim(p[2])
         elif p[0].upper().endswith("ROOM") and len(p) >= 6:
             vals = [m(v) for v in p[2:6]]
             if all(v is not None for v in vals): rooms.append({"name": p[1], "rect": vals})
@@ -106,6 +112,8 @@ elif CAL_W or CAL_AREA:
         r["rect"] = [v*s for v in r["rect"]]
     W, H = W*s, H*s
     CALIB = f"总宽 {CAL_W}m" if CAL_W else f"面积 {CAL_AREA}㎡"
+if W < 3 or H < 3:                      # degenerate parse (whole flat can't be <3m) → neutral box, never a sliver
+    W, H = 9.0, 7.0
 W, H = round(W, 2), round(H, 2)
 if CALIB: print(f"✓ 已按已知尺寸标定：{CALIB}  →  外框 {W}×{H}m")
 
