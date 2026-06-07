@@ -1,3 +1,5 @@
+**中文** · [English](TECHNICAL_REPORT.en.md)
+
 # Madori（間取り）技术报告
 
 > 赛道 B · Multimodal — 用 Gemma 4 多模态把建筑师"读户型图"的能力降维给普通人一眼看到
