@@ -42,10 +42,22 @@ const clickId = async id => page.evaluate(i => document.getElementById(i)?.click
 // 平滑绕模型转 90°（直接绕 target 旋转相机位置，不依赖 setAzimuthalAngle —— three@0.128 OrbitControls 无此法）
 const orbitQuarter = () => page.evaluate(() => new Promise(res => {
   const tgt = controls.target, off = camera.position.clone().sub(tgt);
-  const r = Math.hypot(off.x, off.z), y = off.y, a0 = Math.atan2(off.z, off.x), dur = 1400, t0 = performance.now();
+  const r = Math.hypot(off.x, off.z), y = off.y, a0 = Math.atan2(off.z, off.x), dur = 1900, t0 = performance.now();
   (function s(){ const t = Math.min(1,(performance.now()-t0)/dur), a = a0 + t*Math.PI/2;
     camera.position.set(tgt.x + r*Math.cos(a), tgt.y + y, tgt.z + r*Math.sin(a)); controls.update(); t<1?requestAnimationFrame(s):res(); })();
 }));
+// 记下默认 3/4 视角；camTo 在 近俯视(plan，平面清晰可见) 与 默认3/4 之间平滑移动相机
+const grabCam = () => page.evaluate(() => { window.__cam34 = camera.position.clone(); });
+const camTo = (mode, dur) => page.evaluate((arg) => new Promise(res => {
+  const tgt = controls.target.clone(), R = (window.__cam34.distanceTo(tgt)) || 14;
+  const dest = arg.mode === 'plan'
+    ? new THREE.Vector3(tgt.x + R*0.20, tgt.y + R*0.95, tgt.z + R*0.20)   // 近俯视：带轻微立体阴影，平面看得清
+    : window.__cam34.clone();                                              // 默认 3/4
+  if (arg.dur <= 1) { camera.position.copy(dest); controls.update(); return res(); }
+  const p0 = camera.position.clone(), t0 = performance.now();
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/arg.dur), e = t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    camera.position.lerpVectors(p0, dest, e); controls.update(); t<1?requestAnimationFrame(s):res(); })();
+}), { mode, dur });
 
 console.log('▸ 录制中…');
 await page.goto('http://localhost:8877/madori.html', { waitUntil: 'networkidle' });
@@ -53,19 +65,28 @@ await wait(500);   // 仅等 three.js 初始化，不留立体预卷
 
 // ═══ 开场：先看平面 → 滑旋钮展开成立体 → 绕一圈看四个面 → 收回平面继续讲解 ═══
 await clickId('tabRead');
-// 1) 立刻摊平为平面 —— 开场第一眼就是「平面图」（砍掉默认立体预卷）
-await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 0; m.dispatchEvent(new Event('input')); }); await wait(2800);
-// 2) 平滑展开 平面 → 立体（拖动 morph 旋钮）
-await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2200;
-  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(t*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
-await wait(1300);
-// 3) 绕模型一圈，四个面各停一下
-for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1100); }
-await wait(800);
-// 4) 收回平面，回到二维继续讲解
-await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 1600;
-  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round((1-t)*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
-await wait(1200);
+await grabCam();
+// 1) 近俯视 + 半立的平面 —— 开场第一眼是「清晰可见的平面图」（纯平 morph0 白底白模会隐形，故留点墙高+俯视看阴影）
+await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 16; m.dispatchEvent(new Event('input')); });
+await camTo('plan', 1);            // 立刻到近俯视
+await wait(3400);                   // 平面停久看清
+// 2) 一边滑旋钮展开立体、一边相机抬回 3/4（平面"立"成 3D）
+await Promise.all([
+  page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2600;
+    (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(16 + t*84); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); })),
+  camTo('default', 2600),
+]);
+await wait(2200);                   // 立体停久一点
+// 3) 绕模型一圈，四个面各停一下（放慢 + 停顿更久）
+for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1500); }
+await wait(1800);                   // 绕完再停
+// 4) 收回平面（近俯视，平面清晰）继续讲解
+await Promise.all([
+  page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 1800;
+    (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(100 - t*84); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); })),
+  camTo('plan', 1800),
+]);
+await wait(1500);
 
 // ═══ 钩子：看不懂 → 一眼懂（最强对比）═══
 // 1) 全屏源图：密密麻麻的户型图，"你看得懂吗？"
