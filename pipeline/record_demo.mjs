@@ -42,7 +42,7 @@ const clickId = async id => page.evaluate(i => document.getElementById(i)?.click
 // 平滑绕模型转 90°（直接绕 target 旋转相机位置，不依赖 setAzimuthalAngle —— three@0.128 OrbitControls 无此法）
 const orbitQuarter = () => page.evaluate(() => new Promise(res => {
   const tgt = controls.target, off = camera.position.clone().sub(tgt);
-  const r = Math.hypot(off.x, off.z), y = off.y, a0 = Math.atan2(off.z, off.x), dur = 1900, t0 = performance.now();
+  const r = Math.hypot(off.x, off.z), y = off.y, a0 = Math.atan2(off.z, off.x), dur = 1300, t0 = performance.now();
   (function s(){ const t = Math.min(1,(performance.now()-t0)/dur), a = a0 + t*Math.PI/2;
     camera.position.set(tgt.x + r*Math.cos(a), tgt.y + y, tgt.z + r*Math.sin(a)); controls.update(); t<1?requestAnimationFrame(s):res(); })();
 }));
@@ -63,63 +63,45 @@ console.log('▸ 录制中…');
 await page.goto('http://localhost:8877/madori.html', { waitUntil: 'networkidle' });
 await wait(500);   // 仅等 three.js 初始化，不留立体预卷
 
-// ═══ 开场：先看平面 → 滑旋钮展开成立体 → 绕一圈看四个面 → 收回平面继续讲解 ═══
-await clickId('tabRead');
-await grabCam();
-// 1) 近俯视 + 半立的平面 —— 开场第一眼是「清晰可见的平面图」（纯平 morph0 白底白模会隐形，故留点墙高+俯视看阴影）
-await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 16; m.dispatchEvent(new Event('input')); });
-await camTo('plan', 1);            // 立刻到近俯视
-await wait(3400);                   // 平面停久看清
-// 2) 一边滑旋钮展开立体、一边相机抬回 3/4（平面"立"成 3D）
-await Promise.all([
-  page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2600;
-    (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(16 + t*84); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); })),
-  camTo('default', 2600),
-]);
-await wait(2200);                   // 立体停久一点
-// 3) 绕模型一圈，四个面各停一下（放慢 + 停顿更久）
-for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(1500); }
-await wait(1800);                   // 绕完再停
-// 4) 收回平面（近俯视，平面清晰）继续讲解
-await Promise.all([
-  page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 1800;
-    (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(100 - t*84); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); })),
-  camTo('plan', 1800),
-]);
-await wait(1500);
+// ═══ 1. 魔法时刻：源户型图 → 升起 3D 白模 → 快速绕一圈（3D 只此一次，过场惊艳）═══
+await clickId('tabRead'); await grabCam();
+await page.evaluate(() => { const m = document.getElementById('morph'); m.value = 0; m.dispatchEvent(new Event('input')); });   // 先摊平（藏在源图放大之下）
+// 源户型图放大：清楚这是「一张户型图」（crisp，解决白底隐形）
+await page.evaluate(() => document.getElementById('planCard')?.click()); await wait(2800);
+await page.evaluate(() => document.getElementById('lightbox')?.click()); await wait(600);
+// 平面 → 立体：白模升起
+await page.evaluate(() => new Promise(res => { const m = document.getElementById('morph'), t0 = performance.now(), dur = 2000;
+  (function s(){ const t = Math.min(1,(performance.now()-t0)/dur); m.value = Math.round(t*100); m.dispatchEvent(new Event('input')); t<1?requestAnimationFrame(s):res(); })(); }));
+await wait(1000);
+// 快速绕一圈看四个面
+for (let i = 0; i < 4; i++) { await orbitQuarter(); await wait(550); }
+await camTo('default', 700);        // 复位默认 3/4 —— 关键：后续讲解段干净，不被开场相机污染
+await wait(900);
 
-// ═══ 钩子：看不懂 → 一眼懂（最强对比）═══
-// 1) 全屏源图：密密麻麻的户型图，"你看得懂吗？"
-await page.evaluate(() => document.getElementById('planCard')?.click()); await wait(2400);
-await page.evaluate(() => document.getElementById('lightbox')?.click()); await wait(700);
-// 2) 切采光：一眼看到哪间采光好（反转！）
-await clickId('tabDay'); await wait(2600);
-
-// ═══ 采光高潮：转朝向实时重算（建筑师能力降维 + 算出来的事实）═══
-for (const d of ['up', 'right', 'down', 'left']) {   // 北 / 东 / 南 / 西 四个朝向各操作一次 + 停顿看清重算
+// ═══ 2. 主角：采光转朝向实时重算（给足时长，全片最重）═══
+await clickId('tabDay'); await wait(2400);
+for (const d of ['up', 'right', 'down', 'left']) {   // 北/东/南/西 各停顿看清重算
   await page.evaluate(dir => document.querySelector(`.cbtn[data-dir="${dir}"]`)?.click(), d);
-  await wait(1900);
+  await wait(2100);
 }
 await wait(1400);
 
-// ═══ 核心：五镜头文字解读（几位专家的眼睛）═══
-await clickId('tabRead'); await wait(1600);
+// ═══ 3. 广度：五镜头解读 + 房间联动 + 面积（快扫，证明完整）═══
+await clickId('tabRead'); await wait(1500);   // 3/4 立体白模 + 文字解读（干净，不再有怪托盘）
 for (const k of ['动线', '采光', '无障碍', '走读', '批评']) {
   await page.evaluate(key => { const t = [...document.querySelectorAll('.lens')].find(e => e.dataset.k === key); t && t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, k);
-  await wait(2200);
+  await wait(1800);
 }
-await page.evaluate(() => document.querySelector('.read .scroll')?.scrollTo({ top: 0, behavior: 'smooth' })); await wait(1100);
-
-// 房间联动 + 面积 → 每间㎡
+await page.evaluate(() => document.querySelector('.read .scroll')?.scrollTo({ top: 0, behavior: 'smooth' })); await wait(900);
 for (const i of [0, 2, 4]) {
-  await page.evaluate(n => { const c = [...document.querySelectorAll('.chip')]; c[n] && c[n].dispatchEvent(new MouseEvent('mouseenter')); }, i); await wait(900);
+  await page.evaluate(n => { const c = [...document.querySelectorAll('.chip')]; c[n] && c[n].dispatchEvent(new MouseEvent('mouseenter')); }, i); await wait(850);
 }
 await page.evaluate(() => { const c = [...document.querySelectorAll('.chip')]; c[0] && c[0].dispatchEvent(new MouseEvent('mouseleave')); });
-await page.fill('#areaIn', '66'); await wait(2400);
+await page.fill('#areaIn', '66'); await wait(2000);
 
-// 动线 + 无障碍
-await clickId('tabCirc'); await wait(2400);
-await clickId('tabA11y'); await wait(2400);
+// ═══ 4. 动线 + 无障碍（干净俯视，快扫）═══
+await clickId('tabCirc'); await wait(2200);
+await clickId('tabA11y'); await wait(2200);
 
 await ctx.close();                                  // flush video
 await browser.close();
